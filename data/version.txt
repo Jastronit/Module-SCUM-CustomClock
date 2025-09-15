@@ -1,0 +1,9 @@
+[Module] CustomClock
+
+[1.0] Alpha
+Detection of the active SinglePlayer account.
+Fetching the current in-game time.
+Converting time from a float value into 24h format.
+
+[1.1] Beta
+Fix for the bug where minutes were showing as 60.
