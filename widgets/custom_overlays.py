@@ -95,7 +95,7 @@ def build_overlay_window(name, params, BaseClass, module_name):
     """
     overlay_widget = QWidget()
     vbox = QVBoxLayout(overlay_widget)
-    overlay_widget.setStyleSheet(f"background-color: {params.get('bg','rgba(0,0,0,127)')}; border: none;")
+    overlay_widget.setStyleSheet(f"background-color: {params.get('bg','rgba(0,0,0,0)')}; border: none;")
 
     for widget_name in params.get("widgets", []):
         w = load_widget(widget_name, BaseClass, module_name)
@@ -122,7 +122,7 @@ def build_overlay_window(name, params, BaseClass, module_name):
             "y": params.get("y", 100),
             "w": params.get("w", 400),
             "h": params.get("h", 200),
-            "bg": params.get("bg", "rgba(0,0,0,127)"),
+            "bg": params.get("bg", "rgba(0,0,0,0)"),
             "module_name": module_name
         },
         module_name=module_name
@@ -141,10 +141,10 @@ def build_overlay_window(name, params, BaseClass, module_name):
         win._overlay_root = overlay_widget
         # ensure win.params exists and has bg (so save_overlay_positions uses updated value)
         try:
-            win.params['bg'] = params.get('bg', win.params.get('bg', 'rgba(0,0,0,127)'))
+            win.params['bg'] = params.get('bg', win.params.get('bg', 'rgba(0,0,0,0)'))
         except Exception:
             win.params = win.params or {}
-            win.params['bg'] = params.get('bg', 'rgba(0,0,0,127)')
+            win.params['bg'] = params.get('bg', 'rgba(0,0,0,0)')
 
 # ------------------ COLOR PREVIEW HELP ------------------
 def create_color_preview(spins, on_color_changed=None):
@@ -241,8 +241,8 @@ def create_widget(BaseClass, module_name):
                     hbox.addWidget(lbl, 0, Qt.AlignRight)
                     spin = QSpinBox()
                     spin.setRange(0, 255)
-                    spin.setValue(0 if color != "A" else 127)
-                    spin.setFixedWidth(80)  # fixed width to avoid stretching
+                    spin.setValue(0 if color != "A" else 0)
+                    spin.setFixedWidth(60)  # fixed width to avoid stretching
                     hbox.addWidget(spin, 0, Qt.AlignRight)
                     spins.append(spin)
 
@@ -262,13 +262,13 @@ def create_widget(BaseClass, module_name):
             label = QLabel("Background:")
             color_layout.addWidget(label, 1)
             self.spin_r = QSpinBox(); self.spin_r.setRange(0,255); self.spin_r.setValue(0)
-            self.spin_r.setFixedWidth(80)
+            self.spin_r.setFixedWidth(60)
             self.spin_g = QSpinBox(); self.spin_g.setRange(0,255); self.spin_g.setValue(0)
-            self.spin_g.setFixedWidth(80)
+            self.spin_g.setFixedWidth(60)
             self.spin_b = QSpinBox(); self.spin_b.setRange(0,255); self.spin_b.setValue(0)
-            self.spin_b.setFixedWidth(80)
-            self.spin_a = QSpinBox(); self.spin_a.setRange(0,255); self.spin_a.setValue(127)
-            self.spin_a.setFixedWidth(80)
+            self.spin_b.setFixedWidth(60)
+            self.spin_a = QSpinBox(); self.spin_a.setRange(0,255); self.spin_a.setValue(0)
+            self.spin_a.setFixedWidth(60)
             overlay_spins = [self.spin_r, self.spin_g, self.spin_b, self.spin_a]
 
             for spin in overlay_spins:
