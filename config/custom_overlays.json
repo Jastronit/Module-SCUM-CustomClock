@@ -1,0 +1,30 @@
+{
+  "Game Clock": {
+    "x": 50,
+    "y": 50,
+    "w": 270,
+    "h": 128,
+    "bg": "rgba(0,0,0,0.0)",
+    "widgets": [
+      "game_clock"
+    ],
+    "widget_bgs": {
+      "game_clock": "rgba(0,0,0,0)"
+    },
+    "user_visible": true
+  },
+  "System Clock": {
+    "x": 50,
+    "y": 53,
+    "w": 264,
+    "h": 125,
+    "bg": "rgba(0,0,0,0)",
+    "widgets": [
+      "system_clock"
+    ],
+    "widget_bgs": {
+      "system_clock": "rgba(0,0,0,0)"
+    },
+    "user_visible": false
+  }
+}
