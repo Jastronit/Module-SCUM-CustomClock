@@ -1,9 +1,19 @@
 [Module] CustomClock
 
 [1.0] Alpha
+Automatic detection of the SinglePlayer database location.
 Detection of the active SinglePlayer account.
 Fetching the current in-game time.
 Converting time from a float value into 24h format.
+Custom overlays Widget.
 
 [1.1] Beta
 Fix for the bug where minutes were showing as 60.
+Fix for the clock changing from 24:00 to 00:00.
+
+[2.0] Beta
+Reworked the entire time-processing system.
+Added detection of in-game time speed.
+Implemented precise simulation between each saved time update.
+Added the option to customize font size, color, and type.
+Added the option to display system time with detailed settings.
