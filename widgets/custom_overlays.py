@@ -50,7 +50,7 @@ def get_config_path(module_name):
 def get_default_overlay_params():
     return {
         "x": 100, "y": 100, "w": 400, "h": 200,
-        "bg": "rgba(0,0,0,127)",
+        "bg": "rgba(0,0,0,0)",
         "widgets": [],
         "widget_bgs": {},
         "user_visible": True
@@ -242,7 +242,7 @@ def create_widget(BaseClass, module_name):
                     spin = QSpinBox()
                     spin.setRange(0, 255)
                     spin.setValue(0 if color != "A" else 127)
-                    spin.setFixedWidth(45)  # fixed width to avoid stretching
+                    spin.setFixedWidth(80)  # fixed width to avoid stretching
                     hbox.addWidget(spin, 0, Qt.AlignRight)
                     spins.append(spin)
 
@@ -262,13 +262,13 @@ def create_widget(BaseClass, module_name):
             label = QLabel("Background:")
             color_layout.addWidget(label, 1)
             self.spin_r = QSpinBox(); self.spin_r.setRange(0,255); self.spin_r.setValue(0)
-            self.spin_r.setFixedWidth(45)
+            self.spin_r.setFixedWidth(80)
             self.spin_g = QSpinBox(); self.spin_g.setRange(0,255); self.spin_g.setValue(0)
-            self.spin_g.setFixedWidth(45)
+            self.spin_g.setFixedWidth(80)
             self.spin_b = QSpinBox(); self.spin_b.setRange(0,255); self.spin_b.setValue(0)
-            self.spin_b.setFixedWidth(45)
+            self.spin_b.setFixedWidth(80)
             self.spin_a = QSpinBox(); self.spin_a.setRange(0,255); self.spin_a.setValue(127)
-            self.spin_a.setFixedWidth(45)
+            self.spin_a.setFixedWidth(80)
             overlay_spins = [self.spin_r, self.spin_g, self.spin_b, self.spin_a]
 
             for spin in overlay_spins:
@@ -282,6 +282,8 @@ def create_widget(BaseClass, module_name):
             overlay_preview = create_color_preview(overlay_spins, on_color_changed=self.update_overlay_bg)
             color_layout.addWidget(overlay_preview, 0, Qt.AlignRight)
             layout.addLayout(color_layout)
+
+            layout.addWidget(QLabel("Game must be borderless windowed for overlays to work properly!"))
 
             # buttons
             btn_create = QPushButton("Create new overlay")
@@ -297,6 +299,7 @@ def create_widget(BaseClass, module_name):
             layout.addWidget(btn_toggle)
 
             layout.addWidget(QLabel("F9: show/hide all overlays, F10: edit mode"))
+            layout.addWidget(QLabel("Edit mode: left mouse drag to move, right mouse drag to resize"))
 
             self.selected_overlay = None
             self.custom_overlays = load_custom_overlays(module_name)
