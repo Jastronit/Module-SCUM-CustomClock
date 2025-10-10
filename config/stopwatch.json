@@ -1,0 +1,29 @@
+{
+  "font_family": "Arial",
+  "font_size": 20,
+  "font_color": "#808080",
+  "countdown_colors": {
+    "100": "#4080ff",
+    "75": "#00ff00",
+    "50": "#ffff00",
+    "25": "#ff8000",
+    "20": "#ff6000",
+    "15": "#ff4000",
+    "10": "#ff2000",
+    "5": "#ff1000",
+    "0": "#ff0000"
+  },
+  "show_seconds": true,
+  "direction": "down",
+  "start_time_sec": 0,
+  "shortcuts": {
+    "start": "ctrl+s",
+    "reset": "ctrl+r",
+    "add_min": "ctrl+up",
+    "add_10min": "ctrl+shift+up",
+    "add_hour": "ctrl+right",
+    "sub_min": "ctrl+down",
+    "sub_hour": "ctrl+left",
+    "direction_toggle": "ctrl+d"
+  }
+}
