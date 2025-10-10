@@ -24,8 +24,3 @@ Added global shortcuts to control the stopwatch from anywhere, with the option t
 Two stopwatch modes: either time measurement or countdown, with the ability to change color based on a user-defined percentage drop from the start.
 Improved widget version for creating overlay windows, with the option to set custom shortcuts for toggling the overlay window’s visibility.
 
-[2.1] Beta
-Pridané stopky s nastaviteľnou veľkosťou, typom písma, vlastnou farbou cez json.
-Pridané globálne skratky na ovládanie stopiek z hocijakého miesta s možnosťou premapovať cez json.
-Dva režimy stopiek buď meranie času alebo odpočet s možnosťou meniť farbu podľa vlastného výberu pri poklese o vlastné nastaviteľné % od štartu.
-Vylepšená verzia widgetu na vytváranie overlay okien s možnosťou nastavovať vlastné skratky na prepínanie viditeľnosti overlay okna.
