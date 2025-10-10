@@ -1,8 +1,8 @@
 {
-  "font_family": "Arial",
+  "font_family": "Z003",
   "font_size": 16,
   "font_color": "#00ff00",
   "show_seconds": true,
   "show_date": true,
-  "date_format": "yyyy-MM-dd (dddd)"
+  "date_format": "dd-MM-yyyy (dddd)"
 }

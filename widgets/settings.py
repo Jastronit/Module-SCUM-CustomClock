@@ -20,13 +20,18 @@ def create_widget(BaseClass, module_name):
             layout.addWidget(self.btn_config)
 
             # Tlačidlo na otvorenie
+            self.btn_config = QPushButton("system_clock.json")
+            self.btn_config.clicked.connect(lambda: self.open_file("system_clock.json"))
+            layout.addWidget(self.btn_config)
+
+            # Tlačidlo na otvorenie
             self.btn_config = QPushButton("game_clock.json")
             self.btn_config.clicked.connect(lambda: self.open_file("game_clock.json"))
             layout.addWidget(self.btn_config)
 
             # Tlačidlo na otvorenie
-            self.btn_config = QPushButton("system_clock.json")
-            self.btn_config.clicked.connect(lambda: self.open_file("system_clock.json"))
+            self.btn_config = QPushButton("stopwatch.json")
+            self.btn_config.clicked.connect(lambda: self.open_file("stopwatch.json"))
             layout.addWidget(self.btn_config)
 
             # Tlačidlo na otvorenie path.ini

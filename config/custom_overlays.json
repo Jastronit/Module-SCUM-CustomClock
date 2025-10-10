@@ -11,20 +11,38 @@
     "widget_bgs": {
       "game_clock": "rgba(0,0,0,0)"
     },
-    "user_visible": true
+    "user_visible": true,
+    "shortcut": "alt+g"
   },
   "System Clock": {
     "x": 50,
     "y": 53,
     "w": 264,
     "h": 125,
-    "bg": "rgba(0,0,0,0)",
+    "bg": "rgba(0,0,0,0.0)",
     "widgets": [
       "system_clock"
     ],
     "widget_bgs": {
-      "system_clock": "rgba(0,0,0,0)"
+      "system_clock": "rgba(0,0,0,0)",
+      "game_clock": "rgba(255,0,0,0)"
     },
-    "user_visible": false
+    "user_visible": true,
+    "shortcut": "alt+r"
+  },
+  "Stopwatch": {
+    "x": 50,
+    "y": 60,
+    "w": 218,
+    "h": 200,
+    "bg": "rgba(0,0,0,0)",
+    "widgets": [
+      "stopwatch"
+    ],
+    "widget_bgs": {
+      "stopwatch": "rgba(0,0,0,0)"
+    },
+    "user_visible": true,
+    "shortcut": "alt+s"
   }
 }
