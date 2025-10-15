@@ -23,4 +23,4 @@ Added a stopwatch with adjustable size, font type, and custom color via JSON.
 Added global shortcuts to control the stopwatch from anywhere, with the option to remap them via JSON.
 Two stopwatch modes: either time measurement or countdown, with the ability to change color based on a user-defined percentage drop from the start.
 Improved widget version for creating overlay windows, with the option to set custom shortcuts for toggling the overlay window’s visibility.
-
+Added the option to open stopwatch.json from the settings widget.

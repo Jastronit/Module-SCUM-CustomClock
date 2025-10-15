@@ -3,7 +3,7 @@ import json
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import QTimer, Qt, QPoint
 from PySide6.QtGui import QFont, QPixmap, QPainter, QColor, QPolygon
-from pynput import keyboard
+from shortcut_listener import get_shortcut_listener
 
 DEFAULT_CONFIG = {
     "font_family": "Arial",
@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {
         "0": "#ff0000"
     },
     "show_seconds": True,
-    "direction": "up",  # "up" alebo "down"
+    "direction": "up",
     "start_time_sec": 0,
     "shortcuts": {
         "start": "ctrl+s",
@@ -35,55 +35,7 @@ DEFAULT_CONFIG = {
     }
 }
 
-# --- Globálne skratky cez pynput ---
-active_shortcuts = {}
-pressed_keys = set()
-already_triggered = set()
-stopwatch_instance = [None]  # mutable ref
-
-def normalize_key(k):
-    if isinstance(k, keyboard.Key):
-        if k in (keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
-            return "ctrl"
-        if k in (keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r):
-            return "alt"
-        if k in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
-            return "shift"
-        return str(k).replace("Key.", "")
-    elif hasattr(k, "char") and k.char:
-        return k.char.lower()
-    return str(k)
-
-def on_press(key):
-    k = normalize_key(key)
-    pressed_keys.add(k)
-    inst = stopwatch_instance[0]
-    if inst is None:
-        return
-    for action, shortcut in active_shortcuts.items():
-        if not shortcut:
-            continue
-        keys = [x.lower() for x in shortcut.split("+")]
-        if set(keys).issubset(pressed_keys):
-            if (action, tuple(sorted(pressed_keys))) in already_triggered:
-                continue
-            inst.handle_shortcut(action)
-            already_triggered.add((action, tuple(sorted(pressed_keys))))
-
-def on_release(key):
-    k = normalize_key(key)
-    if k in pressed_keys:
-        pressed_keys.remove(k)
-    to_remove = set()
-    for item in already_triggered:
-        action, keys_tuple = item
-        if k in keys_tuple:
-            to_remove.add(item)
-    already_triggered.difference_update(to_remove)
-
-listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-listener.daemon = True
-listener.start()
+stopwatch_instance = [None]  # mutable reference to the current widget
 
 def ensure_dir(path):
     try:
@@ -117,16 +69,16 @@ def draw_arrow(direction="up", size=32, color="#00ffcc"):
     painter.setBrush(QColor(color))
     painter.setPen(Qt.NoPen)
     if direction == "up":
-        points = [ 
-            (size//2, size//4), 
-            (size//4, 3*size//4), 
-            (3*size//4, 3*size//4)
-        ]
-    else:  # down
         points = [
-            (size//2, 3*size//4),
-            (size//4, size//4),
-            (3*size//4, size//4)
+            (size // 2, size // 4),
+            (size // 4, 3 * size // 4),
+            (3 * size // 4, 3 * size // 4)
+        ]
+    else:
+        points = [
+            (size // 2, 3 * size // 4),
+            (size // 4, size // 4),
+            (3 * size // 4, size // 4)
         ]
     poly = QPolygon([QPoint(x, y) for x, y in points])
     painter.drawPolygon(poly)
@@ -140,14 +92,14 @@ def create_widget(BaseClass, module_name):
             stopwatch_instance[0] = self
 
             layout = QHBoxLayout(self)
-            layout.setAlignment(Qt.AlignCenter)  # <-- toto pridaj
+            layout.setAlignment(Qt.AlignCenter)
             self.setLayout(layout)
             self.setMinimumSize(200, 80)
             self.setMaximumSize(4000, 200)
 
             self.arrow_label = QLabel()
             self.arrow_label.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-            self.arrow_label.setFixedWidth(36)  # šípka bude tesne vedľa hodín
+            self.arrow_label.setFixedWidth(36)
 
             self.time_label = QLabel("00:00")
             self.time_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
@@ -176,8 +128,8 @@ def create_widget(BaseClass, module_name):
             self.timer.start(1000)
             self.update_widget()
 
-            # Aktivuj skratky
-            self._register_shortcuts()
+            # Registrácia do shortcut listenera
+            get_shortcut_listener().register_object(self)
 
         # ---- Config helpers ----
         def _ensure_config(self):
@@ -208,29 +160,19 @@ def create_widget(BaseClass, module_name):
             except Exception:
                 pass
 
-            fam = str(cfg.get("font_family", DEFAULT_CONFIG["font_family"]))
-            size = int(cfg.get("font_size", DEFAULT_CONFIG["font_size"]))
-            self._font_color = cfg.get("font_color", DEFAULT_CONFIG["font_color"])
-            self._show_seconds = bool(cfg.get("show_seconds", DEFAULT_CONFIG["show_seconds"]))
-            self._direction = cfg.get("direction", "up")
-            self._start_time = int(cfg.get("start_time_sec", 0))
-            self._countdown_colors = cfg.get("countdown_colors", DEFAULT_CONFIG["countdown_colors"])
             self._shortcuts = cfg.get("shortcuts", DEFAULT_CONFIG["shortcuts"])
+            self._font_color = cfg.get("font_color", DEFAULT_CONFIG["font_color"])
+            self._show_seconds = cfg.get("show_seconds", DEFAULT_CONFIG["show_seconds"])
+            self._direction = cfg.get("direction", "up")
+            self._start_time = cfg.get("start_time_sec", 0)
+            self._countdown_colors = cfg.get("countdown_colors", DEFAULT_CONFIG["countdown_colors"])
             self._current_time = self._start_time
 
+            fam = str(cfg.get("font_family", DEFAULT_CONFIG["font_family"]))
+            size = int(cfg.get("font_size", DEFAULT_CONFIG["font_size"]))
             font = QFont(fam, size)
             self.time_label.setFont(font)
-            # Farba sa nastavuje v update_widget podľa countdown
             self.update_arrow()
-
-            # Zaregistruj nové skratky
-            self._register_shortcuts()
-
-        def _register_shortcuts(self):
-            # Prekopíruj do global active_shortcuts
-            active_shortcuts.clear()
-            for k, v in self._shortcuts.items():
-                active_shortcuts[k] = v
 
         def update_arrow(self):
             color = self._font_color
@@ -241,7 +183,6 @@ def create_widget(BaseClass, module_name):
 
         # ---- Tick každú sekundu ----
         def update_widget(self):
-            self._load_and_apply_config()
             if self._running:
                 if self._direction == "up":
                     self._current_time += 1
@@ -258,6 +199,7 @@ def create_widget(BaseClass, module_name):
                 color = get_percent_color(percent, self._countdown_colors)
             else:
                 color = self._font_color
+
             self.time_label.setStyleSheet(f"color: {color}; font-weight: bold;")
             self.time_label.setText(seconds_to_str(self._current_time, self._show_seconds))
             self.update_arrow()
@@ -267,36 +209,42 @@ def create_widget(BaseClass, module_name):
                 self.timer.stop()
             except Exception:
                 pass
+            get_shortcut_listener().unregister_object(self)
             stopwatch_instance[0] = None
 
-        # ---- Ovládanie cez pynput ----
-        def handle_shortcut(self, action):
-            if action == "start":
-                self._running = not self._running
-                if self._running:
-                    self._percent_base_time = self._current_time
-            elif action == "reset":
-                self._current_time = self._start_time
-                self._running = False
-                self._percent_base_time = self._current_time
-            elif action == "add_min":
-                self._current_time += 60
-            elif action == "add_10min":
-                self._current_time += 600
-            elif action == "add_hour":
-                self._current_time += 3600
-            elif action == "sub_min":
-                self._current_time = max(0, self._current_time - 60)
-            elif action == "sub_hour":
-                self._current_time = max(0, self._current_time - 3600)
-            elif action == "direction_toggle":
-                self._direction = "down" if self._direction == "up" else "up"
-                self.update_arrow()
-            # Okamžite aktualizuj widget
-            self.update_widget()
+        # ---- Handler pre shortcut_listener ----
+        def handle_shortcut(self, key: str):
+            # print("Shortcut received:", key)
+            """Porovná stlačenú kombináciu s hodnotami z _shortcuts"""
+            for action, shortcut in self._shortcuts.items():
+                if key.lower() == shortcut.lower():
+                    if action == "start":
+                        self._running = not self._running
+                        if self._running:
+                            self._percent_base_time = self._current_time
+                    elif action == "reset":
+                        self._current_time = self._start_time
+                        self._running = False
+                        self._percent_base_time = self._current_time
+                    elif action == "add_min":
+                        self._current_time += 60
+                    elif action == "add_10min":
+                        self._current_time += 600
+                    elif action == "add_hour":
+                        self._current_time += 3600
+                    elif action == "sub_min":
+                        self._current_time = max(0, self._current_time - 60)
+                    elif action == "sub_hour":
+                        self._current_time = max(0, self._current_time - 3600)
+                    elif action == "direction_toggle":
+                        self._direction = "down" if self._direction == "up" else "up"
+                        self.update_arrow()
+                    self.update_widget()
+                    break  # už sme našli zodpovedajúcu akciu
 
     return StopwatchWidget()
 
+
 def get_widget_dock_position():
-    return Qt.LeftDockWidgetArea, 3
+    return Qt.LeftDockWidgetArea, 4
 
