@@ -1,3 +1,11 @@
+# custom_overlays2.py
+# Widget pre správu vlastných overlayov - (QtBridge shortcuts)
+# Autor: Jastronit (upravené pre QtBridge)
+# Verzia: 4.1
+
+# /////////////////////////////////////////////////////////////////////////////////////////////
+# ////---- Importovanie potrebných knižníc ----////
+# /////////////////////////////////////////////////////////////////////////////////////////////
 import os
 import json
 import importlib.util
@@ -9,77 +17,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QPixmap, QPalette, QColor
 import overlay_manager
-#from pynput import keyboard
-from shortcut_listener import get_shortcut_listener
+from shortcut_manager import get_bridge
 
-# ------------------ GLOBAL SHORTCUTS ------------------
-"""active_shortcuts = {}
-pressed_keys = set()
+DEAD_KEYS = {"ˇ", "´", "`", "^", "˚", "¨", "¸", "~"}
+INVALID_CHARS = {"?", "_", "ˇ"}
 
-def normalize_key(k):
-    # Mapovanie pre modifikátory
-    if isinstance(k, keyboard.Key):
-        if k in (keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
-            return "ctrl"
-        if k in (keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r):
-            return "alt"
-        if k in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
-            return "shift"
-        return str(k).replace("Key.", "")
-    elif hasattr(k, "char") and k.char:
-        return k.char.lower()
-    return str(k)"""
+# /////////////////////////////////////////////////////////////////////////////////////////////
+# ////---- Pomocné funkcie ----////
+# /////////////////////////////////////////////////////////////////////////////////////////////
 
-# Pomocná sada, aby sa overlay prepínal len raz na stlačenie
-already_triggered = set()
-
-"""def on_press(key):
-    k = normalize_key(key)
-    pressed_keys.add(k)
-    for overlay_id, shortcut in active_shortcuts.items():
-        if not shortcut:
-            continue
-        keys = [x.lower() for x in shortcut.split("+")]
-        # Porovnávaj ako množiny
-        if set(keys).issubset(pressed_keys):
-            if (overlay_id, tuple(sorted(pressed_keys))) in already_triggered:
-                continue
-            module, cname = overlay_id.split(":", 1)
-            mgr = overlay_manager.start_overlay_manager()
-            full_name = f"{module}:{cname}"
-            if full_name in mgr.overlays:
-                win = mgr.overlays[full_name]
-                new_state = not getattr(win, "user_visible", True)
-                win.user_visible = new_state
-                try:
-                    win.set_overlay_visible(new_state and mgr.global_show)
-                except Exception:
-                    win.setVisible(new_state and mgr.global_show)
-                # Refresh ikon
-                app = QApplication.instance()
-                for widget in app.allWidgets():
-                    if hasattr(widget, "refresh_overlay_list") and callable(widget.refresh_overlay_list):
-                        if hasattr(widget, "module_name") and widget.module_name == module:
-                            widget.refresh_overlay_list()
-            already_triggered.add((overlay_id, tuple(sorted(pressed_keys))))"""
-
-"""def on_release(key):
-    k = normalize_key(key)
-    if k in pressed_keys:
-        pressed_keys.remove(k)
-    # Po uvoľnení klávesy vymaž trigger pre všetky overlaye
-    to_remove = set()
-    for item in already_triggered:
-        overlay_id, keys_tuple = item
-        if k in keys_tuple:
-            to_remove.add(item)
-    already_triggered.difference_update(to_remove)
-
-listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-listener.daemon = True
-listener.start()"""
-
-# ------------------ RGBA MODE DETECTION ------------------
+# ////---- Detekcia režimu RGBA pre štýly ----////
 def detect_rgba_mode():
     test = QLabel()
     try:
@@ -92,7 +39,9 @@ def detect_rgba_mode():
     return "float"
 
 RGBA_MODE = detect_rgba_mode()
+# ////-----------------------------------------------------------------------------------------
 
+# ////---- Trieda pre drag & drop QListWidget ----////
 class DraggableListWidget(QListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,15 +50,21 @@ class DraggableListWidget(QListWidget):
         self.setDropIndicatorShown(True)
         self.setDefaultDropAction(Qt.MoveAction)
         self.setDragDropMode(QListWidget.InternalMove)
+# ////-----------------------------------------------------------------------------------------
 
+# ////---- Deteckia tmavého režimu ----////
 def is_dark_mode():
     palette = QApplication.instance().palette()
     window_color = palette.color(QPalette.Window)
     return window_color.lightness() < 128
+# ////-----------------------------------------------------------------------------------------
 
+# ////---- Cesty a načítanie/ukladanie konfigurácie ----////
 def get_config_path(module_name):
     return os.path.join("modules", module_name, "config", "custom_overlays.json")
+# ////-----------------------------------------------------------------------------------------
 
+# ////---- Získanie predvolených parametrov overlay ----////
 def get_default_overlay_params():
     return {
         "x": 100, "y": 100, "w": 400, "h": 200,
@@ -119,7 +74,9 @@ def get_default_overlay_params():
         "user_visible": True,
         "shortcut": ""
     }
+# ////-----------------------------------------------------------------------------------------
 
+# ////---- Načítanie a uloženie vlastných overlayov ----////
 def load_custom_overlays(module_name):
     path = get_config_path(module_name)
     if os.path.exists(path):
@@ -135,7 +92,9 @@ def save_custom_overlays(module_name, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+# ////-----------------------------------------------------------------------------------------
 
+# ////---- Načítanie widgetu podľa názvu ----////
 def load_widget(widget_name, BaseClass, module_name):
     widget_path = os.path.join("modules", module_name, "widgets", f"{widget_name}.py")
     if not os.path.exists(widget_path):
@@ -149,8 +108,11 @@ def load_widget(widget_name, BaseClass, module_name):
     if hasattr(mod, "create_widget"):
         return mod.create_widget(BaseClass, module_name)
     return None
+# ////-----------------------------------------------------------------------------------------
 
-def build_overlay_window(name, params, BaseClass, module_name, self):
+# ////---- Vytvorenie overlay okna ----////
+def build_overlay_window(name, params, BaseClass, module_name, parent_widget):
+    # create overlay root widget
     overlay_widget = QWidget()
     vbox = QVBoxLayout(overlay_widget)
     overlay_widget.setStyleSheet(f"background-color: {params.get('bg','rgba(0,0,0,0)')}; border: none;")
@@ -185,13 +147,9 @@ def build_overlay_window(name, params, BaseClass, module_name, self):
         module_name=module_name
     )
 
-    # Registrácia overlay widgetu do shortcut listenera
+    # attach metadata so we can find it later
     overlay_widget._overlay_name = name
     overlay_widget._overlay_module = module_name
-    if params.get("shortcut"):
-        shortcut_listener = get_shortcut_listener()
-        overlay_widget.handle_shortcut = lambda combo, w=overlay_widget, p=params: self.handle_overlay_shortcut(w, p, combo)
-        shortcut_listener.register_object(overlay_widget)
 
     win = mgr.overlays.get(full_name)
     if win is not None:
@@ -207,6 +165,10 @@ def build_overlay_window(name, params, BaseClass, module_name, self):
             win.params = win.params or {}
             win.params['bg'] = params.get('bg', 'rgba(0,0,0,0)')
 
+    return overlay_widget, full_name
+    # ////-------------------------------------------------------------------------------------
+
+# ////---- Vytvorenie náhľadu farby pre RGBA spinboxy ----////
 def create_color_preview(spins, on_color_changed=None):
     preview = QLabel()
     preview.setFixedSize(30, 20)
@@ -231,7 +193,13 @@ def create_color_preview(spins, on_color_changed=None):
     for spin in spins:
         spin.valueChanged.connect(update_preview)
     return preview
+# ////-----------------------------------------------------------------------------------------
 
+# ///////////////////////////////////////////////////////////////////////////////////////////////
+# ////---- Vytvorenie hlavného widgetu pre správu vlastných overlayov ----////
+# ///////////////////////////////////////////////////////////////////////////////////////////////
+
+# ////---- Hlavná trieda widgetu ----////
 def create_widget(BaseClass, module_name):
     class CustomOverlaysWidget(BaseClass):
         def __init__(self):
@@ -239,6 +207,13 @@ def create_widget(BaseClass, module_name):
             self.module_name = module_name
             self.setWindowTitle("Vlastné Overlays (drag & drop)")
             self._suppress_widget_updates = False
+
+            # Bridge and handler datastore
+            self.bridge = get_bridge()
+            # maps normalized combo string -> handler callable
+            self._bridge_handlers = {}
+            # maps overlay cname -> full_name in overlay_manager
+            self._overlay_fullnames = {}
 
             layout = QVBoxLayout(self)
             self.setLayout(layout)
@@ -255,10 +230,8 @@ def create_widget(BaseClass, module_name):
                     layout.addWidget(self.banner)
             except Exception:
                 pass
-            
+
             # Overlay list + object reference
-            global rf
-            rf = self
             layout.addWidget(QLabel("Custom overlays list:"))
             self.overlay_list = QListWidget()
             layout.addWidget(self.overlay_list)
@@ -356,14 +329,87 @@ def create_widget(BaseClass, module_name):
 
             self.selected_overlay = None
             self.custom_overlays = load_custom_overlays(module_name)
+
+            # build existing overlays and remember fullnames
+            mgr = overlay_manager.start_overlay_manager()
+            for cname, params in self.custom_overlays.items():
+                overlay_root, full_name = build_overlay_window(cname, params, BaseClass, module_name, self)
+                self._overlay_fullnames[cname] = full_name
+
+            # register shortcuts based on JSON
+            self._register_shortcuts()
+
+            # populate UI list
             self.refresh_overlay_list()
 
-            for cname, params in self.custom_overlays.items():
-                build_overlay_window(cname, params, BaseClass, module_name, self)
-                # zaregistruj skratku
-                """shortcut = params.get("shortcut", "")
-                if shortcut:
-                    active_shortcuts[f"{module_name}:{cname}"] = shortcut"""
+        # ----- Shortcut management -----
+        def _normalize_combo(self, combo: str) -> str:
+            if not combo:
+                return ""
+            return combo.replace(" ", "").lower()
+
+        def _register_shortcuts(self):
+            # unregister old handlers
+            try:
+                for combo_norm, handler in list(self._bridge_handlers.items()):
+                    try:
+                        self.bridge.off(f"shortcut.{combo_norm}", handler)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            self._bridge_handlers.clear()
+
+            # read fresh from JSON (self.custom_overlays should already be current but read to be safe)
+            overlays_cfg = load_custom_overlays(self.module_name)
+            self.custom_overlays = overlays_cfg
+
+            for cname, params in overlays_cfg.items():
+                combo = params.get("shortcut", "")
+                combo_norm = self._normalize_combo(combo)
+                if not combo_norm:
+                    continue
+                # create zero-arg handler that toggles the specific overlay
+                def make_handler(fullname):
+                    return lambda: self._on_shortcut_for_overlay(fullname)
+                full_name = f"{self.module_name}:{cname}"
+                handler = make_handler(full_name)
+                event_name = f"shortcut.{combo_norm}"
+                try:
+                    self.bridge.on(event_name, handler)
+                    self._bridge_handlers[combo_norm] = handler
+                except Exception:
+                    pass
+
+        def _on_shortcut_for_overlay(self, full_name: str):
+            """Called in main thread by QtBridge when a shortcut is triggered."""
+            mgr = overlay_manager.start_overlay_manager()
+            win = mgr.overlays.get(full_name)
+            if win is None:
+                # overlay not present (maybe deleted) - nothing to do
+                return
+            new_state = not getattr(win, 'user_visible', True)
+            win.user_visible = new_state
+            try:
+                win.set_overlay_visible(new_state and mgr.global_show)
+            except Exception:
+                try:
+                    win.setVisible(new_state and mgr.global_show)
+                except Exception:
+                    pass
+            # update JSON persistently
+            module_name, cname = full_name.split(":", 1)
+            try:
+                cfg = load_custom_overlays(module_name)
+                if cname in cfg:
+                    cfg[cname]['user_visible'] = new_state
+                    save_custom_overlays(module_name, cfg)
+                    # update in-memory copy
+                    self.custom_overlays = cfg
+            except Exception:
+                pass
+            # refresh UI
+            self.refresh_overlay_list()
 
         # ///---- Metódy pre manipuláciu s overlaymi ----////
         def eventFilter(self, source, event):
@@ -378,7 +424,7 @@ def create_widget(BaseClass, module_name):
                     if event.modifiers() & Qt.AltModifier: seq.append("alt")
                     if event.modifiers() & Qt.ShiftModifier: seq.append("shift")
                     key = event.key()
-                    # Ak je to len modifikátor, neukončuj recording_shortcut!
+                    # If only modifier pressed, continue recording
                     if key in (Qt.Key_Control, Qt.Key_Shift, Qt.Key_Alt, Qt.Key_Meta):
                         return True
                     text = event.text().lower()
@@ -386,15 +432,15 @@ def create_widget(BaseClass, module_name):
                         seq.append(text)
                     shortcut = "+".join(seq)
                     self.shortcut_field.setText(shortcut)
-                    # uloz do JSON, atď.
+                    # uloz do JSON a re-register
                     if self.selected_overlay:
                         if self.selected_overlay not in self.custom_overlays:
-                            # ak ešte neexistuje, vytvor nový záznam
                             self.custom_overlays[self.selected_overlay] = get_default_overlay_params()
                         self.custom_overlays[self.selected_overlay]["shortcut"] = shortcut
                         save_custom_overlays(self.module_name, self.custom_overlays)
-                        # active_shortcuts[f"{self.module_name}:{self.selected_overlay}"] = shortcut
-                        # aktualizuj aj lokálne zobrazenie
+                        # re-register all shortcuts so change is immediate
+                        self._register_shortcuts()
+                        # aktualizuj UI
                         self.refresh_overlay_list()
                     self.recording_shortcut = False
                     self.shortcut_field.clearFocus()
@@ -496,12 +542,10 @@ def create_widget(BaseClass, module_name):
             mgr = overlay_manager.start_overlay_manager()
             full_name = f"{self.module_name}:{name}"
             if full_name not in mgr.overlays:
-                build_overlay_window(name, params, BaseClass, self.module_name, self)
-            # zaregistruj skratku
-            if params['shortcut']:
-                #active_shortcuts[full_name] = params['shortcut']
-                # Registrácia do shortcut listenera
-                get_shortcut_listener().register_object(self)
+                overlay_root, fullname = build_overlay_window(name, params, BaseClass, self.module_name, self)
+                self._overlay_fullnames[name] = fullname
+            # re-register shortcuts because new overlay might have shortcut
+            self._register_shortcuts()
 
         def on_select_overlay(self):
             items = self.overlay_list.selectedItems()
@@ -514,19 +558,46 @@ def create_widget(BaseClass, module_name):
         def delete_selected_overlay(self):
             if not self.selected_overlay:
                 return
+
+            # odstráň z konfigurácie
             if self.selected_overlay in self.custom_overlays:
                 del self.custom_overlays[self.selected_overlay]
                 save_custom_overlays(self.module_name, self.custom_overlays)
+
             mgr = overlay_manager.start_overlay_manager()
             full_name = f"{self.module_name}:{self.selected_overlay}"
+
+            # cleanup – ak overlay existuje, odregistrovať všetky child widgety
             if full_name in mgr.overlays:
+                win = mgr.overlays[full_name]
+                try:
+                    # prechádzame všetky widgety v overlayi
+                    for child in win.findChildren(QWidget):
+                        # ak má cleanup/close_widget, zavoláme ju
+                        if hasattr(child, "close_widget") and callable(child.close_widget):
+                            try:
+                                child.close_widget()
+                            except Exception:
+                                pass
+                        elif hasattr(child, "cleanup") and callable(child.cleanup):
+                            try:
+                                child.cleanup()
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                # nakoniec odstráň overlay
                 mgr.remove_overlay(full_name)
-            # odstráň skratku pynput verzia
-            """if full_name in active_shortcuts:
-                del active_shortcuts[full_name]"""
-            # Odregistruj sa zo shortcut listenera
-            get_shortcut_listener().unregister_object(self)
-            # Refresh list
+
+            # vyčisti mapovanie
+            if self.selected_overlay in self._overlay_fullnames:
+                del self._overlay_fullnames[self.selected_overlay]
+
+            # odregistrovať všetky skratky z bridge
+            self._register_shortcuts()
+
+            # obnoviť UI
             self.refresh_overlay_list()
 
         def toggle_selected_overlay(self):
@@ -630,13 +701,13 @@ def create_widget(BaseClass, module_name):
                         pass
 
         def handle_overlay_shortcut(self, overlay_widget, params, combo):
+            # kept for backwards compatibility if other code calls directly
             shortcut = params.get("shortcut", "").lower().strip()
             if combo.lower() == shortcut:
                 cname = overlay_widget._overlay_name
                 mgr = overlay_manager.start_overlay_manager()
                 full_name = f"{self.module_name}:{cname}"
 
-                # --- prepnutie stavu overlay ---
                 if full_name in mgr.overlays:
                     win = mgr.overlays[full_name]
                     new_state = not getattr(win, "user_visible", True)
@@ -646,15 +717,33 @@ def create_widget(BaseClass, module_name):
                     except Exception:
                         win.setVisible(new_state and mgr.global_show)
 
-                # --- aktualizácia JSON ---
                 if cname in self.custom_overlays:
                     self.custom_overlays[cname]['user_visible'] = not self.custom_overlays[cname].get('user_visible', True)
                     save_custom_overlays(self.module_name, self.custom_overlays)
 
-                # --- refresh UI ---
                 self.refresh_overlay_list()
 
-    return CustomOverlaysWidget()
+        def close_widget(self):
+            # cleanup handlers
+            try:
+                for combo_norm, handler in list(self._bridge_handlers.items()):
+                    try:
+                        self.bridge.off(f"shortcut.{combo_norm}", handler)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            self._bridge_handlers.clear()
 
+        def showEvent(self, event):
+            super().showEvent(event)
+            # ensure shortcuts registered when shown
+            self._register_shortcuts()
+
+    return CustomOverlaysWidget()
+# ////-----------------------------------------------------------------------------------------
+
+# ////---- Pozícia dock widgetu v hlavnom okne ----////
 def get_widget_dock_position():
     return Qt.RightDockWidgetArea, 1
+# ////-----------------------------------------------------------------------------------------

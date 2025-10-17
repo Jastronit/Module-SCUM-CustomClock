@@ -23,6 +23,7 @@
     "add_10min": "ctrl+shift+up",
     "add_hour": "ctrl+right",
     "sub_min": "ctrl+down",
+    "sub_10min": "ctrl+shift+down",
     "sub_hour": "ctrl+left",
     "direction_toggle": "ctrl+d"
   }

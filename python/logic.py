@@ -175,7 +175,7 @@ def detect_ss_path():
     system = platform.system()
     candidates = []
     if system == "Windows":
-        candidates.append(os.path.expandvars(r"%LOCALAPPDATA%\SCUM\Config\WindowsNoEditor\ServerSettings.ini"))
+        candidates.append(os.path.expandvars(r"%LOCALAPPDATA%/SCUM/Saved/Config/WindowsNoEditor/ServerSettings.ini"))
     elif system == "Linux":
         candidates.append(os.path.expanduser("~/Steam/steamapps/compatdata/513710/pfx/drive_c/users/steamuser/AppData/Local/SCUM/Config/WindowsNoEditor/ServerSettings.ini"))
         candidates.append(os.path.expanduser("~/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps/compatdata/513710/pfx/drive_c/users/steamuser/AppData/Local/SCUM/Config/WindowsNoEditor/ServerSettings.ini"))
