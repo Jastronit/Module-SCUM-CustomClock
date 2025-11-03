@@ -11,16 +11,29 @@ from datetime import datetime
 # ////---- Cesty k súborom ----////
 module_root = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(module_root, 'data', 'data.ini')
+log_path = os.path.join(module_root, 'data', 'log.txt')
 path_ini_path = os.path.join(module_root, 'config' ,'path.ini')
 
 # ////-----------------------------------------------------------------------------------------
 
+"""
 # ////---- Logovanie do konzoly ----////
 def log_to_console(message):
     timestamp = datetime.now().strftime("%H:%M:%S")
     line = f"[{timestamp}] {message}\n"
     print(line, end='')
 
+# ////-----------------------------------------------------------------------------------------
+"""
+# ////---- Logovanie do log.txt ktorý si načíta GUI widget console----////
+def log_to_console(message, color=None):
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    line = f"[{timestamp}] {message}\n"
+    try:
+        with open(log_path, 'a') as f:
+            f.write(line)
+    except Exception as e:
+        print(f"[LOGIC] Chyba pri zápise do log.txt: {e}")
 # ////-----------------------------------------------------------------------------------------
 
 # ////---- Automatická detekcia cesty k SCUM.db ----////
@@ -49,7 +62,7 @@ def detect_db_path():
             if os.path.exists(path):
                 return path
 
-    log_to_console("[Weather] SCUM.db nebol nájdený. Prosím zadajte cestu ručne do path.ini")
+    # log_to_console("[Weather] SCUM.db nebol nájdený. Prosím zadajte cestu ručne do path.ini")
     return None
 
 # ////-----------------------------------------------------------------------------------------
@@ -70,7 +83,7 @@ def ensure_indexes(conn):
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_weather_user_profile_id ON weather_parameters(user_profile_id);")
         conn.commit()
     except sqlite3.Error as e:
-        log_to_console(f"[Weather] Chyba pri vytváraní indexov: {e}")
+        log_to_console(f"Chyba pri vytváraní indexov: {e}")
 
 # ////-----------------------------------------------------------------------------------------
 
@@ -86,7 +99,7 @@ def open_db_connection(db_path):
         ensure_indexes(conn)
         return conn
     except sqlite3.Error as e:
-        log_to_console(f"[Weather] Chyba pri otváraní databázy: {e}")
+        log_to_console(f"Chyba pri otváraní databázy: {e}")
         return None
 
 # ////-----------------------------------------------------------------------------------------
@@ -97,7 +110,7 @@ def close_db_connection(conn):
         try:
             conn.close()
         except sqlite3.Error as e:
-            log_to_console(f"[Weather] Chyba pri zatváraní databázy: {e}")
+            log_to_console(f"Chyba pri zatváraní databázy: {e}")
 
 # ////-----------------------------------------------------------------------------------------
 
@@ -121,7 +134,6 @@ def get_active_user_profile_id(conn):
     """, (entity_system_id,))
     result = cursor.fetchone()
     return result['user_profile_id'] if result else None
-
 # ////-----------------------------------------------------------------------------------------
 
 # ////---- Získanie time_of_day pre konkrétneho hráča ----////
@@ -136,7 +148,6 @@ def get_time_of_day(conn, user_profile_id):
     """, (user_profile_id,))
     row = cursor.fetchone()
     return row['time_of_day'] if row else None
-
 # ////-----------------------------------------------------------------------------------------
 
 # ////---- Premena float času na 00:00-23:59 hodiny a minúty ----////
@@ -154,7 +165,6 @@ def convert_float_time_to_hm(time_float):
     if hours == 24:
         hours = 0
     return hours, minutes
-
 # ////-----------------------------------------------------------------------------------------
 
 def detect_ss_path():
@@ -192,7 +202,7 @@ def detect_ss_path():
             return path
 
     # Ak sa nenašlo nič
-    log_to_console("[Weather] ServerSettings.ini nenájdené. Prosím zadajte cestu ručne do config/path.ini")
+    # log_to_console("[Weather] ServerSettings.ini nenájdené. Prosím zadajte cestu ručne do config/path.ini")
     return None
 
 # ////---- Načítanie TimeOfDaySpeed zo ServerSettings.ini ----////
@@ -212,7 +222,7 @@ def get_time_of_day_speed():
         if 'World' in config and 'scum.TimeOfDaySpeed' in config['World']:
             time_speed = float(config['World']['scum.TimeOfDaySpeed'])
     except Exception as e:
-        log_to_console(f"[Weather] Chyba pri čítaní TimeOfDaySpeed: {e}")
+        log_to_console(f"Chyba pri čítaní TimeOfDaySpeed: {e}")
 
     return time_speed
 
@@ -243,7 +253,6 @@ def write_time_to_ini(time_float, hours, minutes):
 
     with open(data_path, 'w') as f:
         config.write(f)
-
 # ////-----------------------------------------------------------------------------------------
 
 # ////---- Hlavná slučka ----////
@@ -255,31 +264,43 @@ def main_loop(conn=None, stop_event=None):
             hours, minutes = convert_float_time_to_hm(time_of_day)
             write_time_to_ini(time_of_day,hours, minutes)
         except Exception as e:
-            log_to_console(f"[Weather] Chyba: {e}")
+            log_to_console(f"Chyba: {e}")
 
         if stop_event and stop_event.is_set():
             break
         time.sleep(1)
-
 # ////-----------------------------------------------------------------------------------------
 
 # ////---- Spustenie logiky ----////
 def logic_main_init(stop_event=None):
+    # Vytvoríme log.txt ak neexistuje a ak existuje, tak ho vyčistíme
+    try:
+        with open(log_path, 'w') as f:
+            f.write("[CustomClock] Module Loaded...\n")
+    except Exception as e:
+        print(f"[LOGIC] Nepodarilo sa vytvoriť log.txt: {e}")
+    
+    # Zistenie cesty k SCUM.db
     db_path = detect_db_path()
     if not db_path or not os.path.exists(db_path):
-        log_to_console("[Weather] SCUM.db file not found or disk disconnected. Please enter the path manually in config/path.ini")
+        log_to_console("SCUM.db file not found or disk disconnected. Please enter the path manually in config/path.ini db_path=path_to_scum.db/SCUM.db")
         return
 
+    # Zistenie cesty k ServerSettings.ini
+    ss_path = detect_ss_path()
+    if not ss_path or not os.path.exists(ss_path):
+        log_to_console("ServerSettings.ini file not found or disk disconnected. Please enter the path manually in config/path.ini ss_path=path_to_ServerSettings.ini/ServerSettings.ini")
+
+    # Otvorenie spojenia s databázou
     conn = open_db_connection(db_path)
     if not conn:
         return
 
+    # Spustenie hlavnej slučky
     main_loop(conn, stop_event)
     close_db_connection(conn)
-
 # ////-----------------------------------------------------------------------------------------
 
 # ////---- Spustenie priamo ----////
 if __name__ == "__main__":
     logic_main_init()
-

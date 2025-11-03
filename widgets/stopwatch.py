@@ -384,5 +384,5 @@ def create_widget(BaseClass, module_name):
 
 # ////---- Pozícia docku (vľavo, index 4) ----////
 def get_widget_dock_position():
-    return Qt.LeftDockWidgetArea, 4
+    return Qt.LeftDockWidgetArea, 3
 

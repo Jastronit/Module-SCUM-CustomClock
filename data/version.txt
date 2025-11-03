@@ -24,3 +24,9 @@ Added global shortcuts to control the stopwatch from anywhere, with the option t
 Two stopwatch modes: either time measurement or countdown, with the ability to change color based on a user-defined percentage drop from the start.
 Improved widget version for creating overlay windows, with the option to set custom shortcuts for toggling the overlay window’s visibility.
 Added the option to open stopwatch.json from the settings widget.
+
+[2.2] Beta
+Added a console widget for module error output.
+Automatic log clearing right after startup.
+
+[Requests] SCUM.db, ServerSettings.ini
