@@ -1,4 +1,5 @@
 [Module] CustomClock
+[Access] SCUM.db, ServerSettings.ini
 
 [1.0] Alpha
 Automatic detection of the SinglePlayer database location.
@@ -29,4 +30,8 @@ Added the option to open stopwatch.json from the settings widget.
 Added a console widget for module error output.
 Automatic log clearing right after startup.
 
-[Requests] SCUM.db, ServerSettings.ini
+[2.3]
+Added support for the new game version v1.2 while maintaining support for older versions.
+Removed the Settings widget (temporarily fully replaced by the Files widget).
+Added the Files widget.
+Fixed a bug in the Custom Overlays widget where spin boxes for the overall overlay background were not updating after selecting an overlay window from the list.

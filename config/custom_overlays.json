@@ -42,7 +42,7 @@
     "widget_bgs": {
       "stopwatch": "rgba(0,0,0,0)"
     },
-    "user_visible": true,
+    "user_visible": false,
     "shortcut": "alt+s"
   }
 }
